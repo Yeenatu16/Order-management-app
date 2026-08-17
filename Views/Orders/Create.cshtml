@@ -1,0 +1,167 @@
+@{ 
+    ViewData["Title"] = "Create Order"; 
+    var products = ViewBag.Products as List<Product> ?? new();
+}
+
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Create New Order</h1>
+            <p class="text-xs text-slate-500 mt-1">Specify customer details and build line items with automatic 15% VAT calculation.</p>
+        </div>
+        <a asp-action="Index" class="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Cancel
+        </a>
+    </div>
+
+    <form id="orderForm" autocomplete="off" onsubmit="submitOrder(event)" class="space-y-6">
+        @Html.AntiForgeryToken()
+
+        <!-- Master Order Header -->
+        <div class="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+            <div>
+                <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Customer Name <span class="text-rose-500">*</span></label>
+                <input type="text" id="custName" name="customerNameField" required 
+                       autocomplete="off" spellcheck="false"
+                       placeholder="Input Customer Name"
+                       class="w-full h-10 px-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+                <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Order Date</label>
+                <input type="text" readonly value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" 
+                       class="w-full h-10 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-slate-500 cursor-not-allowed" />
+            </div>
+        </div>
+
+        <!-- Detail Line Items -->
+        <div class="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900 dark:text-white">Order Line Items</h2>
+                    <p class="text-xs text-slate-500">Unit prices snapshot directly from the catalog model.</p>
+                </div>
+                <button type="button" onclick="addLine()" class="px-3 py-1.5 bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-300 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 rounded-lg text-xs font-semibold transition">
+                    + Add Product
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                        <tr>
+                            <th class="p-3 w-4/12">Product</th>
+                            <th class="p-3 w-2/12">Quantity</th>
+                            <th class="p-3 w-2/12">Unit Price (ETB)</th>
+                            <th class="p-3 w-1/12">Subtotal (ETB)</th>
+                            <th class="p-3 w-1/12">VAT (15%)</th>
+                            <th class="p-3 w-1/12">Total (ETB)</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lineBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary & Submission -->
+        <div class="flex justify-end">
+            <div class="w-80 p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 text-xs">
+                <div class="flex justify-between text-slate-500">
+                    <span>Subtotal:</span>
+                    <span id="sumSub" class="font-mono">ETB 0.00</span>
+                </div>
+                <div class="flex justify-between text-slate-500">
+                    <span>VAT (15%):</span>
+                    <span id="sumVat" class="font-mono">ETB 0.00</span>
+                </div>
+                <div class="border-t border-slate-200 dark:border-slate-800 pt-2 flex justify-between font-bold text-sm">
+                    <span class="text-slate-900 dark:text-white">Grand Total:</span>
+                    <span id="sumTot" class="font-mono text-primary-600 dark:text-primary-400">ETB 0.00</span>
+                </div>
+                <button type="submit" class="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl transition shadow-md">
+                    Submit & Save Order
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    const catalog = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(products));
+
+    function addLine() {
+        const tbody = document.getElementById('lineBody');
+        const id = 'row-' + Date.now();
+        const opts = catalog.map(p => `<option value="${p.Id}" data-price="${p.Price}">${p.Name} (${p.Code})</option>`).join('');
+
+        const tr = document.createElement('tr');
+        tr.id = id;
+        tr.className = "item-row";
+        tr.innerHTML = `
+            <td class="p-2.5"><select class="prod-sel w-full h-9 rounded-lg border border-slate-300 dark:border-slate-700 px-2 bg-transparent text-xs" onchange="calcRow('${id}')"><option value="">Select product...</option>${opts}</select></td>
+            <td class="p-2.5"><input type="number" min="1" value="1" autocomplete="off" class="qty-inp w-full h-9 rounded-lg border border-slate-300 dark:border-slate-700 px-2 text-center bg-transparent font-mono text-xs" oninput="calcRow('${id}')" /></td>
+            <td class="p-2.5"><input type="text" readonly class="price-inp w-full h-9 rounded-lg bg-slate-100 dark:bg-slate-950 px-2 font-mono text-xs text-slate-500" value="ETB 0.00" /></td>
+            <td class="p-2.5"><input type="text" readonly class="sub-inp w-full h-9 rounded-lg bg-slate-100 dark:bg-slate-950 px-2 font-mono text-xs text-slate-500" value="ETB 0.00" /></td>
+            <td class="p-2.5"><input type="text" readonly class="vat-inp w-full h-9 rounded-lg bg-slate-100 dark:bg-slate-950 px-2 font-mono text-xs text-slate-500" value="ETB 0.00" /></td>
+            <td class="p-2.5 font-mono font-bold text-xs line-tot">ETB 0.00</td>
+            <td class="p-2.5 text-center"><button type="button" onclick="this.closest('tr').remove(); recalc();" class="text-rose-500 font-bold p-1">&times;</button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    function calcRow(id) {
+        const row = document.getElementById(id);
+        const sel = row.querySelector('.prod-sel');
+        const price = parseFloat(sel.options[sel.selectedIndex]?.getAttribute('data-price') || 0);
+        const qty = parseInt(row.querySelector('.qty-inp').value) || 0;
+
+        const sub = qty * price;
+        const vat = sub * 0.15;
+        const tot = sub + vat;
+
+        row.querySelector('.price-inp').value = `ETB ${price.toFixed(2)}`;
+        row.querySelector('.sub-inp').value = `ETB ${sub.toFixed(2)}`;
+        row.querySelector('.vat-inp').value = `ETB ${vat.toFixed(2)}`;
+        row.querySelector('.line-tot').innerText = `ETB ${tot.toFixed(2)}`;
+        recalc();
+    }
+
+    function recalc() {
+        let s = 0, v = 0, t = 0;
+        document.querySelectorAll('.item-row').forEach(r => {
+            const sel = r.querySelector('.prod-sel');
+            const price = parseFloat(sel.options[sel.selectedIndex]?.getAttribute('data-price') || 0);
+            const qty = parseInt(r.querySelector('.qty-inp').value) || 0;
+            const sub = qty * price;
+            const vat = sub * 0.15;
+            s += sub; v += vat; t += (sub + vat);
+        });
+        document.getElementById('sumSub').innerText = `ETB ${s.toFixed(2)}`;
+        document.getElementById('sumVat').innerText = `ETB ${v.toFixed(2)}`;
+        document.getElementById('sumTot').innerText = `ETB ${t.toFixed(2)}`;
+    }
+
+    async function submitOrder(e) {
+        e.preventDefault();
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(r => {
+            const pid = parseInt(r.querySelector('.prod-sel').value);
+            const qty = parseInt(r.querySelector('.qty-inp').value);
+            if (pid && qty > 0) items.push({ productId: pid, quantity: qty });
+        });
+
+        if (items.length === 0) return alert('Please add at least one line item.');
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const res = await fetch('/Orders/Create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ customerName: document.getElementById('custName').value.trim(), items: items })
+        });
+
+        if (res.ok) window.location.href = '/Orders';
+        else alert('Error submitting order.');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => addLine());
+</script>

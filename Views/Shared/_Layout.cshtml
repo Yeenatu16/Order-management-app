@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Order Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#EEF2FF', 500: '#6366F1', 600: '#4F46E5', 700: '#4338CA' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased">
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="flex h-screen overflow-hidden">
+            <!-- SIDEBAR -->
+            <aside class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0">
+                <div>
+                    <div class="h-16 flex items-center px-6 gap-3 border-b border-slate-100 dark:border-slate-800">
+                        <div class="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold shadow-md">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                        </div>
+                        <span class="font-bold text-sm">Order Management</span>
+                    </div>
+
+                    <nav class="p-4 space-y-1.5 text-xs font-medium">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-controller="Home" asp-action="Index" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                <span>Dashboard</span>
+                            </a>
+                        }
+                        <a asp-controller="Orders" asp-action="Index" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            <span>Orders</span>
+                        </a>
+                        <a asp-controller="Orders" asp-action="Create" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span>Create New Order</span>
+                        </a>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-controller="Products" asp-action="Index" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                    <span>Products Catalog</span>
+                                </div>
+                                <span class="px-2 py-0.5 text-[9px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded border border-purple-200">Admin</span>
+                            </a>
+                        }
+                    </nav>
+                </div>
+
+                <!-- Bottom User Card (Without bottom logout button) -->
+                <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 overflow-hidden">
+                    <div class="w-9 h-9 rounded-xl bg-primary-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        @(User.Identity.Name?.Substring(0, Math.Min(2, User.Identity.Name.Length)).ToUpper() ?? "US")
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold truncate text-slate-900 dark:text-white">@User.Identity.Name</p>
+                        <p class="text-[10px] text-primary-600 dark:text-primary-400 font-bold truncate">
+                            @(User.IsInRole("Admin") ? "Administrator" : "Standard User")
+                        </p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- MAIN CONTAINER -->
+            <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+                <!-- TOP HEADER -->
+                <header class="h-16 shrink-0 bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between z-20">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 dark:text-white">Order Management System</h2>
+                        <p class="text-[11px] text-slate-500">Enterprise Transaction Portal</p>
+                    </div>
+
+                    <!-- Right Header Actions (With Top-Right Logout Button) -->
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            🌓
+                        </button>
+
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition border border-rose-200 dark:border-rose-900 flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                                <span>Logout</span>
+                            </button>
+                        </form>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-8">
+                    @RenderBody()
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="min-h-screen flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950">
+            @RenderBody()
+        </div>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

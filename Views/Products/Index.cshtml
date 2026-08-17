@@ -1,0 +1,121 @@
+@model IEnumerable<Product>
+@{ ViewData["Title"] = "Product Catalog"; }
+
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Product Catalog</h1>
+            <p class="text-xs text-slate-500">Admin CRUD Management</p>
+        </div>
+        <button onclick="openModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold rounded-xl transition shadow-md">
+            + Add Product
+        </button>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                    <th class="py-3 px-4">Code</th>
+                    <th class="py-3 px-4">Name</th>
+                    <th class="py-3 px-4">Price (ETB)</th>
+                    <th class="py-3 px-4">Description</th>
+                    <th class="py-3 px-4 text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                @foreach (var p in Model)
+                {
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-mono font-bold text-primary-600 dark:text-primary-400">@p.Code</td>
+                        <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">@p.Name</td>
+                        <td class="py-3 px-4 font-mono font-bold text-emerald-600">ETB @p.Price.ToString("N2")</td>
+                        <td class="py-3 px-4 text-slate-500">@p.Description</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="deleteProd(@p.Id)" class="px-2 py-1 text-[11px] font-semibold rounded bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 hover:bg-rose-100 transition">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Add Product -->
+<div id="pModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl w-full max-w-md space-y-4 text-xs border border-slate-200 dark:border-slate-800 shadow-2xl">
+        <form onsubmit="saveProduct(event)" autocomplete="off" class="space-y-4">
+            @Html.AntiForgeryToken()
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Add New Product</h3>
+                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Product Code <span class="text-rose-500">*</span></label>
+                <input type="text" id="pCode" placeholder="Input Product Code" required autocomplete="off"
+                       class="w-full h-9 px-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Product Name <span class="text-rose-500">*</span></label>
+                <input type="text" id="pName" placeholder="Input Product Name" required autocomplete="off"
+                       class="w-full h-9 px-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Unit Price (ETB) <span class="text-rose-500">*</span></label>
+                <input type="number" step="0.01" min="0.01" id="pPrice" placeholder="Input Unit Price" required autocomplete="off"
+                       class="w-full h-9 px-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Description</label>
+                <textarea id="pDesc" rows="3" placeholder="Input Description" autocomplete="off"
+                          class="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-md">
+                    Save Product
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal() { document.getElementById('pModal').classList.remove('hidden'); }
+    function closeModal() { document.getElementById('pModal').classList.add('hidden'); }
+
+    async function saveProduct(e) {
+        e.preventDefault();
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const res = await fetch('/Products/Save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({
+                code: document.getElementById('pCode').value.trim(),
+                name: document.getElementById('pName').value.trim(),
+                price: parseFloat(document.getElementById('pPrice').value),
+                description: document.getElementById('pDesc').value.trim()
+            })
+        });
+        if (res.ok) location.reload();
+    }
+
+    async function deleteProd(id) {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const res = await fetch('/Products/Delete/' + id, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token }
+        });
+        if (res.ok) location.reload();
+    }
+</script>

@@ -1,0 +1,56 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Log In"; }
+
+<div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-8 space-y-6">
+    <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-600 text-white shadow-md mb-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Order Management System</h1>
+        <p class="text-xs text-slate-500">Enterprise Order Management Portal</p>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <form asp-action="Login" method="post" autocomplete="off" class="space-y-4 text-xs">
+        <div asp-validation-summary="ModelOnly" class="text-rose-500 font-semibold"></div>
+
+        <div>
+            <label asp-for="Email" class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Email Address</label>
+            <input asp-for="Email" placeholder="Input Email" autocomplete="off" spellcheck="false"
+                   class="w-full h-10 px-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <span asp-validation-for="Email" class="text-rose-500 mt-1 block"></span>
+        </div>
+
+        <div>
+            <label asp-for="Password" class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+            <input asp-for="Password" placeholder="Input Password" autocomplete="new-password"
+                   class="w-full h-10 px-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <span asp-validation-for="Password" class="text-rose-500 mt-1 block"></span>
+        </div>
+
+        <div class="flex justify-end">
+            <a asp-action="ForgotPassword" class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
+                Forgot Password?
+            </a>
+        </div>
+
+        <button type="submit" class="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition shadow-md">
+            Log In
+        </button>
+    </form>
+
+    <div class="pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500">
+        Don't have an account?
+        <a asp-action="Register" class="font-semibold text-primary-600 dark:text-primary-400 hover:underline ml-1">
+            Create an account
+        </a>
+    </div>
+</div>
