@@ -5,7 +5,7 @@ using OrderManagementApp.Data;
 using OrderManagementApp.Models;
 
 namespace OrderManagementApp.Controllers;
-
+//only Admin can create the products
 [Authorize(Roles = "Admin")]
 public class ProductsController : Controller
 {

@@ -1,6 +1,9 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using OrderManagementApp.Services;
 using OrderManagementApp.ViewModels;
 
 namespace OrderManagementApp.Controllers;
@@ -10,15 +13,21 @@ public class AccountController : Controller
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly IConfiguration _config;
+    private readonly IEmailService _emailService;
+    private readonly IMemoryCache _cache;
 
     public AccountController(
         SignInManager<IdentityUser> signInManager,
         UserManager<IdentityUser> userManager,
-        IConfiguration config)
+        IConfiguration config,
+        IEmailService emailService,
+        IMemoryCache cache)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _config = config;
+        _emailService = emailService;
+        _cache = cache;
     }
 
     [HttpGet]
@@ -117,8 +126,32 @@ public class AccountController : Controller
             return View(model);
         }
 
+        var otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+        var cacheKey = $"OTP_{model.Email.ToLowerInvariant()}";
+        _cache.Set(cacheKey, otpCode, TimeSpan.FromMinutes(5));
+
+        var emailBody = $@"
+            <div style='font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px;'>
+                <h2 style='color: #1e293b;'>Password Reset Verification</h2>
+                <p style='color: #64748b; font-size: 14px;'>Use the following 6-digit code to complete your password reset:</p>
+                <div style='background-color: #f1f5f9; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;'>
+                    <span style='font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4f46e5; font-family: monospace;'>{otpCode}</span>
+                </div>
+                <p style='color: #94a3b8; font-size: 12px;'>This code will expire in 5 minutes. If you did not request this code, you can safely ignore this email.</p>
+            </div>";
+
+        try
+        {
+            await _emailService.SendEmailAsync(model.Email, "Your Password Reset Verification Code", emailBody);
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, "Unable to send email. Please check your SMTP configuration. Error: " + ex.Message);
+            return View(model);
+        }
+
         TempData["ResetEmail"] = model.Email;
-        TempData["SuccessMessage"] = "Verification Code generated! Use '123456' for verification.";
+        TempData["SuccessMessage"] = "Verification code has been sent to your email.";
         return RedirectToAction("ResetPassword");
     }
 
@@ -126,6 +159,8 @@ public class AccountController : Controller
     public IActionResult ResetPassword()
     {
         var email = TempData["ResetEmail"] as string ?? string.Empty;
+        if (string.IsNullOrEmpty(email)) return RedirectToAction("ForgotPassword");
+
         return View(new ResetPasswordViewModel { Email = email });
     }
 
@@ -135,16 +170,17 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(model);
 
-        if (model.VerificationCode != "123456")
+        var cacheKey = $"OTP_{model.Email.ToLowerInvariant()}";
+        if (!_cache.TryGetValue(cacheKey, out string? cachedOtp) || cachedOtp != model.VerificationCode.Trim())
         {
-            ModelState.AddModelError(nameof(model.VerificationCode), "Invalid 6-digit verification code. Please enter 123456.");
+            ModelState.AddModelError(nameof(model.VerificationCode), "Invalid or expired verification code.");
             return View(model);
         }
 
         var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)
         {
-            ModelState.AddModelError(nameof(model.Email), "Invalid email address.");
+            ModelState.AddModelError(nameof(model.Email), "User account not found.");
             return View(model);
         }
 
@@ -153,6 +189,7 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
+            _cache.Remove(cacheKey);
             TempData["SuccessMessage"] = "Password reset successfully. Please log in with your new password.";
             return RedirectToAction("Login");
         }

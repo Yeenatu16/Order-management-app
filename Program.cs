@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OrderManagementApp.Services;
 using OrderManagementApp.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // 1. Database Context for SQL Server Express
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
